@@ -4,6 +4,8 @@ import pygame
 import os
 from settings import WIDTH, HEIGHT, PLAYER_SIZE
 
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+
 class Player(pygame.sprite.Sprite):
     def __init__(self, name):
         super().__init__()
@@ -13,7 +15,7 @@ class Player(pygame.sprite.Sprite):
 
 
         for img in ['up.png', 'down.png', 'left.png', 'right.png']:
-            path = os.path.join('assets', img)
+            path = os.path.join(BASE_DIR, 'assets', img)
             try:
                 loaded = pygame.image.load(path).convert_alpha()
                 self.sprites[img] = pygame.transform.scale(loaded, PLAYER_SIZE)
@@ -85,13 +87,3 @@ class Player(pygame.sprite.Sprite):
     def draw(self, surface):
         surface.blit(self.image, self.rect)
 
-
-            def update(self, delta):
-        # ... lógica de direção e f-string ...
-
-        # Aplica o movimento sem CLAMP (trava de tela)
-        velocidade_final = 600 * delta
-        self.world_pos += direction * velocidade_final
-        
-        # O rect segue a posição global
-        self.rect.center = self.world_pos
