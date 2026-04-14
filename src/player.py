@@ -12,6 +12,9 @@ class Player(pygame.sprite.Sprite):
         self.name = name
         self.score = 0
         self.sprites = {}
+        self.lives = 3
+        self.invincible_timer = 0
+
 
 
         for img in ['up.png', 'down.png', 'left.png', 'right.png']:
