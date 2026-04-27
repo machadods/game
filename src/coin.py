@@ -7,7 +7,8 @@ class Coin(pygame.sprite.Sprite):
         self.image = pygame.Surface((32,32)) 
         self.image.fill((255,215,0)) 
         self.rect = self.image.get_rect()
-        self.rect.topleft = (x,y)
+        self.world_pos = pygame.math.Vector2(x, y)
+        self.rect.center = self.world_pos
         self.size = 32 # Define o tamanho da moeda ( 32 pixels de largura e altura)
         self.image = pygame.Surface((self.size, self.size), pygame.SRCALPHA) # Cria a superficie da imagem com suporte a transparencia(SRCALPHA)
 
@@ -27,8 +28,4 @@ class Coin(pygame.sprite.Sprite):
         #Desenha o círculo menor (centro claro) para dar efeito de relevo
         pygame.draw.circle(self.image, OURO,  centro, raio - 2)
 
-        # Cria o "rect" (retângulo de colisão e posição) baseado na imagem criada
-        self.rect = self.image.get_rect()
-
-        # define onde o canto superior esquerdo da moeda ficará na tela
-        self.rect.topleft = (x,y)
+    

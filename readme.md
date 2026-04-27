@@ -1,161 +1,160 @@
-VISÃO GERAL DO SEU JOGO
+# GAME ZERO
 
-Você quer 3 camadas principais:
+Jogo espacial single-player (com arquitetura preparada para LAN multiplayer) desenvolvido em Python com Pygame.
 
-🚀 1. ESPAÇO (EXPLORAÇÃO)
-Player voa no universo
-coleta minérios
-encontra planetas
-frotas inimigas aparecem ao se aproximar
-🪐 2. PLANETA (CONQUISTA / RTS)
-pouso no planeta
-combate territorial
-construção de base
-robôs/IA trabalhando
-🌱 3. TERRAFORMAÇÃO
-planetas sem civilização
-automatização com IA
-expansão de ecossistema / mineração / indústria
-🧠 O SEGREDO: SEPARAR EM “MODOS”
+---
 
-Você NÃO pode misturar tudo no mesmo loop simples.
+## Visão Geral
 
-Você precisa disso:
+O jogador pilota uma nave em um universo aberto 2D, explora planetas, combate hordas inimigas, coleta ouro e usa a **Dobra Temporal** para teletransporte rápido entre pontos do mapa.
 
-GAME_STATE = "SPACE"
+### Fluxo de estados
 
-Exemplo:
+```
+LOGIN → MENU → ORBITAL ↔ STRATEGIC (mapa)
+                   ↓
+                GAMEOVER
+```
 
-if GAME_STATE == "SPACE":
-    update_space()
-elif GAME_STATE == "PLANET":
-    update_planet()
-elif GAME_STATE == "BASE_BUILD":
-    update_base()
-🧱 ARQUITETURA IDEAL (IMPORTANTE)
-📁 Estrutura futura do projeto:
-src/
-  space/
-    player.py
-    enemies.py
-    planets.py
-    galaxy.py
+---
 
-  planet/
-    base.py
-    buildings.py
-    workers.py
-    combat.py
+## Mecânicas Implementadas
 
-  ai/
-    robots.py
-    factions.py
+### Login e Persistência
+- Tela de login com campo de texto — cria jogador novo ou carrega existente do banco SQLite
+- Auto-save a cada 30 segundos durante o jogo
+- Backup automático do banco ao fechar
 
-  core/
-    game_state.py
-    camera.py
-🚀 ETAPA 1 (PRÓXIMO PASSO REALISTA)
+### Mundo Aberto (ORBITAL)
+- Universo de **160 000 × 160 000 unidades** com câmera seguindo o jogador
+- Fundo com **parallax em 3 camadas** de estrelas
+- **Zona Segura** na origem (raio 3 000 u) — hordas não são ativadas enquanto o jogador está dentro
 
-Antes de planeta e RTS, você precisa disso:
+### Sistema Solar Fixo
 
-🌍 PLANETAS NO ESPAÇO
+8 planetas com posições fixas inspiradas no Sistema Solar real. A Zona Segura (origem) representa o Sol.
 
-Cada planeta:
+| Planeta | Tipo | Distância aprox. | Dificuldade |
+|---|---|---|---|
+| Mercurium | lava_world | 11 700 u | I |
+| Venus Nova | lava_world | 23 000 u | III |
+| Gaia | forest | 29 400 u | II |
+| Marte | terrestrial_iron | 40 200 u | II |
+| Ceres | ice_world | 50 100 u | I |
+| Jupiter | gas_giant | 62 700 u | IIII |
+| Saturno | gas_giant | 72 600 u | IIII |
+| Netuno | ice_world | 79 400 u | IIIII |
 
-class Planet(pygame.sprite.Sprite):
-    def __init__(self, x, y, radius):
-        self.world_pos = pygame.Vector2(x, y)
-        self.radius = radius
-        self.has_enemies = True
-        self.difficulty = random.randint(1, 5)
-👾 FROTA INIMIGA (SISTEMA QUE VOCÊ QUER)
+- Coordenadas fixas no banco — sem aleatoriedade
+- Cada planeta tem raio visual proporcional ao tipo e raio de ativação de horda
+- Se o banco estiver com planetas antigos (aleatórios), é automaticamente recriado
 
-Quando player chega perto:
+### Sistema de Horda
+- Ao entrar no raio de ativação de um planeta, a horda começa a spawnar
+- Mínimo de 50 inimigos por planeta (`difficulty × 15`, no mínimo 50)
+- Ondas de 10 inimigos a cada 6 segundos
+- Planeta **conquistado** quando toda a horda for eliminada — salvo no banco
+- **Recompensa de conquista: +1 vida**
 
-distance = (player.world_pos - planet.world_pos).length()
+### Ouro (única moeda)
+- Moedas de ouro orbitam cada planeta (quantidade proporcional à dificuldade)
+- **Cada nave inimiga abatida solta 1 coin no lugar onde morreu**
+- Coletadas por colisão com a nave
+- Usadas para **Dobra Temporal** e **Tiro Rápido**
 
-if distance < trigger_radius:
-    spawn_enemy_fleet()
-⚔️ IDEIA DE COMBATE DE FROTA
-inimigos não são individuais
-são ondas coordenadas
-spawn em círculo ao redor do player
-for i in range(20):
-    angle = i * (360/20)
-    spawn_position = planet + circle_offset(angle)
-🪐 ETAPA 2 (POUSO NO PLANETA)
+### Dobra Temporal
+- Tecla **F** no modo ORBITAL (ou ENTER no mapa STRATEGIC)
+- Requer **50 ouro**
+- Teletransporta o jogador para o raio de ativação do planeta selecionado
 
-Quando limpa a área:
+### Combate
+- **Tiro normal**: clique esquerdo do mouse — dispara na direção do cursor (azul-claro)
+- **Tiro rápido**: botão **direito do mouse segurado** — requer **≥ 10 ouro** — dispara continuamente a cada 0,08 s (ciano)
+- Inimigos atiram automaticamente quando o jogador entra em alcance (1 200 u)
+- Inimigos com separação entre si (evitam aglomerar)
 
-if enemies == []:
-    GAME_STATE = "PLANET"
-🏗️ ETAPA 3 (RTS / BASE)
+### Mapa Estratégico (STRATEGIC)
+- Tecla **M** para abrir/fechar
+- Visão zoom-out do mesmo mundo (fator `STRAT_SCALE = 0.004`)
+- Clique em planeta para selecioná-lo — painel lateral exibe tipo, dificuldade, horda e se tem ouro
+- **ENTER** no mapa: fecha e voa até o planeta selecionado (Dobra Temporal)
 
-Aqui entra:
+### HUD
+- Vidas (círculos vermelhos)
+- Nome do piloto
+- Contador de inimigos eliminados
+- Ouro atual (dourado se ≥ 50, escuro se insuficiente)
+- Status do tiro rápido
+- Radar circular com inimigos, ouro, balas e planetas
+- Seta de waypoint para o planeta selecionado
+- Mensagens temporárias no centro da tela
 
-construção de estruturas
-mineração automatizada
-robôs IA
-expansão de território
+---
 
-Exemplo:
+## Estrutura do Projeto
 
-class Building:
-    def __init__(self):
-        self.produces = "minerals"
-        self.workers = []
-🤖 IA (IMPORTANTE)
+```
+game/
+├── main.py                  # Loop principal, GameEngine, eventos
+├── settings.py              # Resolução (1200×800), FPS, tamanhos de sprite
+├── readme.md
+├── game_data.db             # Banco SQLite (gerado automaticamente)
+└── src/
+    ├── player.py            # Classe Player (nave do jogador)
+    ├── enemy.py             # Classe Enemy (IA, separação, tiro automático)
+    ├── bullet.py            # Classe Bullet (projéteis)
+    ├── coin.py              # Classe Coin (ouro coletável)
+    ├── camera.py            # Câmera com offset de mundo
+    ├── stars.py             # StarField (parallax 3 camadas)
+    ├── database.py          # GameDatabase (SQLite — players e planets)
+    └── celestial/
+        ├── __init__.py
+        └── planet.py        # Classe Planet, sistema de horda, PLANET_TYPES
+```
 
-Você vai ter 3 tipos:
+---
 
-1. 👾 inimigos agressivos
-2. 🤖 robôs do player
-3. 🌍 IA de planeta (civilização ou selvagem)
-🔥 O MAIS IMPORTANTE (REALIDADE TÉCNICA)
+## Controles
 
-Seu jogo vai crescer MUITO, então você precisa entender isso:
+| Ação | Controle |
+|---|---|
+| Mover nave | WASD ou setas |
+| Atirar | Botão esquerdo do mouse |
+| Tiro rápido | Botão direito do mouse (segurado, ≥ 10 ouro) |
+| Abrir/fechar mapa | M |
+| Selecionar planeta no mapa | Clique esquerdo |
+| Dobra Temporal | F (orbital) / ENTER (mapa) |
+| Sair | ESC |
 
-❌ NÃO FAZER:
-tudo no main.py
-lógica misturada
-classes soltas
-✅ FAZER:
-sistemas separados
-estados de jogo
-entidades independentes
-mundo baseado em coordenadas
-🚀 ORDEM CERTA DE CONSTRUÇÃO
+---
 
-Se você quiser chegar nesse jogo completo:
+## Como Rodar
 
-1. ✔ planeta simples no mapa
-2. ✔ trigger de enxame inimigo
-3. ✔ combate em ondas
-4. ✔ sistema de “limpar área”
-5. ✔ modo pouso
-6. ✔ base simples (1 building)
-7. ✔ robôs coletando minério
-8. ✔ expansão automática
-9. ✔ terraformação
-💡 REALIDADE IMPORTANTE (sem te travar)
+**Requisitos:** Python 3.10+ e Pygame
 
-Isso aqui é:
+```bash
+pip install pygame
+python main.py
+```
 
-👉 projeto de meses, não dias
-👉 nível indie game real
-👉 mistura de:
+---
 
-RTS (Warcraft)
-Sandbox espacial (No Man’s Sky)
-Survival (Vampire Survivors)
-🚀 PRÓXIMO PASSO (EU RECOMENDO)
+## Banco de Dados (SQLite)
 
-Antes de planetas complexos, o ideal é:
+Arquivo `game_data.db` gerado automaticamente na primeira execução.
 
-👉 “Sistema de planeta simples no seu mundo atual”
+**Tabela `players`:** `id, username, color, ship_x, ship_y, health, kills, score, gold, created_at`
 
-Ou seja:
+**Tabela `planets`:** `id, name, x, y, radius_km, planet_type, difficulty, minerals, owner_id, conquered`
 
-um círculo grande no mapa
-quando chega perto → spawn de inimigos
-quando limpa → recompensa
+Backups com timestamp são criados automaticamente ao fechar o jogo.
+
+---
+
+## Roadmap
+
+- [ ] Multiplayer LAN (cliente/servidor)
+- [ ] Modo GROUND (combate na superfície do planeta)
+- [ ] Construção de base e robôs mineradores
+- [ ] Terraformação
+- [ ] Facções e diplomacia entre planetas

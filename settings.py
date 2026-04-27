@@ -1,6 +1,7 @@
 # C:\Users\wagner62215896\Documents\settings.py
 
-WIDTH = 1200
-HEIGHT = 800
+WIDTH = 1280
+HEIGHT = 600
 FPS = 50
 PLAYER_SIZE = 150, 150
+ENEMY_SIZE = 150, 150
