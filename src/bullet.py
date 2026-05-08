@@ -1,5 +1,7 @@
 import pygame
 
+BULLET_LIFETIME = 30.0   # segundos — funciona em qualquer região do mapa
+
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, pos, direction, color=(255, 0, 0)):
         super().__init__()
@@ -8,17 +10,17 @@ class Bullet(pygame.sprite.Sprite):
         self.radius = 5
         self.world_pos = pygame.math.Vector2(pos)
         self.rect = self.image.get_rect(center=(self.world_pos.x, self.world_pos.y))
-        self.direction = direction.normalize()
         if direction.length() > 0:
             self.direction = direction.normalize()
         else:
             self.direction = pygame.math.Vector2(0, -1)
-        self.speed = 400
+        self.speed    = 400
+        self.lifetime = BULLET_LIFETIME
 
-    def update(self, delta): # 'delta' é o tempo em segundos desde a última atualização (usado para movimento suave independente do FPS)
+    def update(self, delta):
         self.world_pos += self.direction * self.speed * delta
         self.rect.center = (self.world_pos.x, self.world_pos.y)
-        
-        if abs(self.world_pos.x) > 200000 or abs(self.world_pos.y) > 200000:
+        self.lifetime -= delta
+        if self.lifetime <= 0:
             self.kill()
 

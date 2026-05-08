@@ -1,31 +1,29 @@
-import pygame # Importa a bilbioteca Pygame para usar as ferramentas de jogo
+import pygame
+import math
 
-# Cria a classe Coin que herda de Sprite (ganha podere de objetos de jogo)
+OURO       = (255, 215,  0)
+OURO_DARK  = (184, 134, 11)
+SIZE       = 18   # moeda menor para não poluir visualmente
+
 class Coin(pygame.sprite.Sprite):
-    def __init__(self,x,y): # função que nasce a moeda, recebendo sua posição.
-        super().__init__() # Ativa as funções internas da classe Sprite do pygame
-        self.image = pygame.Surface((32,32)) 
-        self.image.fill((255,215,0)) 
-        self.rect = self.image.get_rect()
+    def __init__(self, x, y, planet=None, angle=0.0, radius=0.0):
+        super().__init__()
+        self.image     = pygame.Surface((SIZE, SIZE), pygame.SRCALPHA)
+        c              = SIZE // 2
+        pygame.draw.circle(self.image, OURO_DARK, (c, c), c)
+        pygame.draw.circle(self.image, OURO,      (c, c), c - 2)
+        self.rect      = self.image.get_rect()
         self.world_pos = pygame.math.Vector2(x, y)
-        self.rect.center = self.world_pos
-        self.size = 32 # Define o tamanho da moeda ( 32 pixels de largura e altura)
-        self.image = pygame.Surface((self.size, self.size), pygame.SRCALPHA) # Cria a superficie da imagem com suporte a transparencia(SRCALPHA)
+        self.rect.center = (int(x), int(y))
 
-        # Define as cores em formato RGB (Vermelho, Verde, Azul)
-        OURO = (255, 215, 0) # Cor amarela brilhante
-        OURO_ESCURO = (184, 134,11) # Cor para dar efeito de borda/sombra
+        # Referência orbital — se tiver planeta pai, a moeda orbita junto
+        self.planet = planet
+        self.angle  = angle   # ângulo relativo ao planeta (radianos)
+        self.radius = radius  # distância da superfície + offset
 
-        # Calcula o ponto central do quadrado de 32x32 para desenha o circulo nas bordas
-        centro = (self.size // 2, self.size // 2)
-
-        # Define o raio (metade do tamanho) para o circulo encostar nas bordas
-        raio = self.size //2
-
-        # Desenha o círculo maior (borda escura) na imagem da moeda
-        pygame.draw.circle(self.image, OURO_ESCURO, centro, raio)
-
-        #Desenha o círculo menor (centro claro) para dar efeito de relevo
-        pygame.draw.circle(self.image, OURO,  centro, raio - 2)
-
-    
+    def update(self):
+        if self.planet is not None:
+            # Segue o planeta mantendo ângulo e raio fixos
+            self.world_pos.x = self.planet.x + math.cos(self.angle) * self.radius
+            self.world_pos.y = self.planet.y + math.sin(self.angle) * self.radius
+        self.rect.center = (int(self.world_pos.x), int(self.world_pos.y))

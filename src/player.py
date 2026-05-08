@@ -2,7 +2,7 @@
 
 import pygame
 import os
-from settings import WIDTH, HEIGHT, PLAYER_SIZE
+from settings import WIDTH, HEIGHT, PLAYER_SIZE, SHIP_WORLD_UNITS
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -20,32 +20,44 @@ class Player(pygame.sprite.Sprite):
 
 
 
+        # Carrega sprites base em PLAYER_SIZE (150x150)
+        raw = {}
         for img in ['up.png', 'down.png', 'left.png', 'right.png']:
             path = os.path.join(BASE_DIR, 'assets', img)
             try:
                 loaded = pygame.image.load(path).convert_alpha()
-                self.sprites[img] = pygame.transform.scale(loaded, PLAYER_SIZE)
+                raw[img] = pygame.transform.scale(loaded, PLAYER_SIZE)
             except Exception as e:
                 print(f"Erro ao carregar {img}: {e}")
-                # Caso falte alguma imagem, cria um bloco cinza
-                surf = pygame.Surface(PLAYER_SIZE)
-                surf.fill((35,35,35))
-                self.sprites[img] = surf
+                surf = pygame.Surface(PLAYER_SIZE, pygame.SRCALPHA)
+                surf.fill((35, 35, 35, 255))
+                raw[img] = surf
 
-        # Gera as Diagoanis automaticamente (Gira as imagens base em 45°)
-        up_base = self.sprites['up.png'] 
-        self.sprites['up_left.png'] = pygame.transform.rotate(up_base, 45)
-        self.sprites['up_right.png'] = pygame.transform.rotate(up_base, -45)
-        
-        # Gira a imagem down para cima as diagonais inferiores
-        down_base = self.sprites['down.png'] 
-        self.sprites['down_left.png']= pygame.transform.rotate(down_base, -45)
-        self.sprites['down_right.png']= pygame.transform.rotate(down_base, 45)
+        # Diagonais: rotate do sprite original 150x150 → bounding box ~213x213
+        diag_sprites = {
+            'up_left.png':    pygame.transform.rotate(raw['up.png'],    45),
+            'up_right.png':   pygame.transform.rotate(raw['up.png'],   -45),
+            'down_left.png':  pygame.transform.rotate(raw['down.png'], -45),
+            'down_right.png': pygame.transform.rotate(raw['down.png'],  45),
+        }
+
+        # Tamanho real do bounding box após rotação (pygame define exatamente)
+        pad = diag_sprites['up_left.png'].get_width()
+
+        # Sprites cardinais: centraliza no mesmo tamanho do diagonal para consistência visual
+        off = (pad - PLAYER_SIZE[0]) // 2
+        for img in ['up.png', 'down.png', 'left.png', 'right.png']:
+            padded = pygame.Surface((pad, pad), pygame.SRCALPHA)
+            padded.blit(raw[img], (off, off))
+            self.sprites[img] = padded
+
+        self.sprites.update(diag_sprites)
 
         
         self.image = self.sprites['up.png']
-        self.rect = self.image.get_rect()
-        self.radius = self.rect.width // 10
+        self.rect  = self.image.get_rect()
+        self.radius       = SHIP_WORLD_UNITS     # colisão em world units
+        self.world_units  = SHIP_WORLD_UNITS
 
         #Posição Real no Universso(Mundo infinito)
         self.world_pos = pygame.math.Vector2(WIDTH/2, HEIGHT/2)
