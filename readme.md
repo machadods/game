@@ -1,14 +1,17 @@
 # Game Zero
 
-Jogo espacial single-player desenvolvido em Python + Pygame.
-Pilote uma nave no sistema solar, enfrente hordas inimigas, colete ouro e conquiste planetas.
+`Game Zero` é um shooter espacial single-player em Python + Pygame.
+Você pilota uma nave em um sistema solar expandido, enfrenta hordas inimigas, coleta ouro e conquista planetas para ganhar vidas e desbloquear novas invasões.
 
 ---
 
 ## Como Rodar
 
-**Requisitos:** Python 3.10+ e Pygame
+### Requisitos
+- Python 3.10+
+- Pygame
 
+### Comandos
 ```bash
 pip install pygame
 python main.py
@@ -18,109 +21,110 @@ python main.py
 
 ## Controles
 
-| Ação | Controle |
+| Ação | Tecla / Mouse |
 |---|---|
-| Mover nave | WASD ou setas |
-| Atirar | Clique esquerdo do mouse |
-| Fogo rápido | Clique direito (segurado) — requer ≥ 10 ouro |
+| Mover nave | WASD ou ←↑↓→ |
+| Atirar | Clique esquerdo |
+| Fogo rápido | Clique direito segurado (requer ≥ 10 ouro) |
 | Mapa estratégico | M |
 | Selecionar planeta no mapa | Clique esquerdo |
-| Dobra Temporal | F (orbital) ou ENTER (no mapa) |
-| Reiniciar | R (tela de Game Over) |
+| Dobra Temporal | F no modo orbital |
+| Reiniciar após Game Over | R |
 | Sair | ESC |
 
 ---
 
-## Mecânicas
+## Visão Geral do Jogo
 
-### Mundo e Navegação
-- Universo de **160 000 × 160 000 unidades de mundo** com câmera suave que segue o jogador
-- **Zona Segura** na origem (raio 3 000 u) — nenhuma horda é ativada enquanto o jogador estiver dentro
-- **Mapa Estratégico** (tecla M): visão zoom-out do sistema solar completo; clique em um planeta para selecioná-lo
-- Janela **redimensionável e maximizável** com renderização em resolução nativa (sem borrão)
+### Mundo e navegação
+- Universo amplo com sistema solar jogável.
+- Câmera suave segue o jogador e a janela é redimensionável.
+- O Sol fica no centro do mapa e funciona como a zona segura do jogo.
+- Na tela estratégica, você vê todo o sistema e pode escolher qual planeta atacar.
 
-### Ouro
-- Única moeda do jogo
-- Fontes: moedas que orbitam cada planeta + **coin dropada por cada nave inimiga abatida**
-- Quantidade de moedas por planeta é proporcional à dificuldade
+### Ouro e recursos
+- Ouro é a moeda principal do jogo.
+- Coleta-se moedas orbitando planetas e eliminando inimigos.
+- Ouro permite usar habilidades especiais, como tiro rápido e Dobra Temporal.
 
 ### Combate
-- **Tiro normal** (clique esquerdo): dispara um projétil na direção do cursor
-- **Fogo rápido** (clique direito segurado): requer ≥ 10 ouro — dispara continuamente a cada 0,08 s
+- Clique esquerdo para atirar em direção ao cursor.
+- Clique direito segurado ativa fogo rápido quando há ouro suficiente.
+- Acumular ouro suficiente melhora o dano de tiros.
 
 ### Dobra Temporal
-- Requer **50 ouro**
-- Teletransporta a nave para o raio de ativação do planeta selecionado no mapa
-- Ativada com **F** na tela orbital ou **ENTER** no mapa estratégico
+- Custa **50 ouro**.
+- Teleporta o jogador para a borda de ativação do planeta selecionado.
+- O destino é calculado com intercept orbital baseado na posição futura do planeta.
 
-### Hordas
-- Ao entrar no raio de ativação de um planeta, a horda começa a spawnar
-- Tamanho: `difficulty × 15` inimigos (mínimo 50)
-- Ondas de **10 inimigos a cada 6 segundos**
-- Inimigos têm separação entre si e atiram automaticamente ao entrar em alcance (1 200 u)
+### Hordas e conquista
+- Quando o jogador entra na área de ativação de um planeta, a horda começa a aparecer.
+- Cada planeta possui dificuldade definida.
+- O planeta é conquistado quando todos os inimigos da horda são eliminados.
+- Conquistar um planeta recompensa o jogador com vidas e pode ativar invasões de outros planetas.
 
-### Conquista
-- Planeta **conquistado** quando toda a horda é eliminada e não restam inimigos vivos
-- **Recompensa: +1 vida**
-- Conquistas são salvas no banco de dados
-
----
-
-## Sistema Solar
-
-8 planetas com posições fixas inspiradas no Sistema Solar real.
-O Sol é representado pela Zona Segura na origem do mapa.
-
-| Planeta | Tipo | Dificuldade | Distância aprox. |
-|---|---|---|---|
-| Mercurium | Lava | I | 11 700 u |
-| Venus Nova | Lava | III | 23 000 u |
-| Gaia | Floresta | II | 29 400 u |
-| Marte | Ferro Terrestre | II | 40 200 u |
-| Ceres | Gelo | I | 50 100 u |
-| Jupiter | Gigante Gasoso | IIII | 62 700 u |
-| Saturno | Gigante Gasoso | IIII | 72 600 u |
-| Netuno | Gelo | IIIII | 79 400 u |
+### Invasões e dinâmica
+- Planetas conquistados podem provocar invasões de outros planetas não conquistados.
+- As invasões são enviadas em ondas e criam pressão constante no mapa.
 
 ---
 
-## HUD
+## Sistema Solar Atualizado
 
-- **Vidas**: círculos vermelhos no canto superior esquerdo
-- **Inimigos abatidos** / **Ouro atual** no canto superior direito
-- **Status do fogo rápido**: mostra disponibilidade ou ativação
-- **Radar circular** (canto inferior esquerdo): exibe planetas, inimigos, ouro e balas ao redor do jogador
-- **Seta de waypoint**: aponta para o planeta selecionado quando fora de vista
-- **Mensagens temporárias** no centro da tela para eventos importantes
+O jogo contém um sistema solar expandido, com planetas principais, luas, asteroides, cometas e regiões especiais.
+O Sol é representado como a zona segura central.
+
+### Exemplos de corpos celestes
+- Mercurium, Venus Nova, Terra, Marte, Ceres, Jupiter, Saturno, Netuno
+- Lua, Io, Europa, Ganimedes, Calisto, Titã, Tritão e outros satélites
+- Plutão, Éris, asteroides do cinturão principal, cometas e cinturão de Kuiper
 
 ---
 
-## Estrutura de Arquivos
+## HUD e interface
+
+- Vidas aparecem no canto superior esquerdo.
+- Inimigos abatidos e ouro atual aparecem no canto superior direito.
+- Indicadores de status de tiro rápido e dano extra são exibidos no HUD.
+- Waypoint aponta para o planeta selecionado quando ele está fora de vista.
+- Mensagens temporárias aparecem no centro da tela.
+
+---
+
+## Estrutura do Projeto
 
 ```
 game/
-├── main.py              # GameEngine, loop principal, HUD, radar, eventos
-├── settings.py          # Resolução base, FPS, tamanhos de sprite
-├── game_data.db         # Banco SQLite (gerado automaticamente)
+├── main.py              # Entrada principal, loop do jogo, lógica e interface
+├── settings.py          # Configurações de tela, escala e tamanhos de sprites
+├── game_data.db         # Banco SQLite gerado automaticamente
+├── readme.md            # Documentação do projeto
 └── src/
-    ├── player.py        # Nave do jogador — movimento, sprites, colisão
-    ├── enemy.py         # Inimigo — perseguição, separação, tiro automático
-    ├── bullet.py        # Projéteis do jogador e inimigos
-    ├── coin.py          # Moedas de ouro coletáveis
-    ├── camera.py        # Câmera com suavização e resize dinâmico
-    ├── stars.py         # Fundo com parallax em 3 camadas
-    ├── database.py      # SQLite — save/load de jogador e planetas
+    ├── player.py        # Classe do jogador: movimento, sprites e limites
+    ├── enemy.py         # Classe de inimigos: IA, formação e invasões
+    ├── bullet.py        # Projéteis de jogador e inimigos
+    ├── coin.py          # Moedas de ouro e órbita de recursos
+    ├── camera.py        # Câmera com zoom e conversão de coordenadas
+    ├── stars.py         # Fundo de estrelas com parallax
+    ├── database.py      # SQLite para salvar jogadores e planetas
     └── celestial/
-        └── planet.py    # Classe Planet, tipos, sistema de horda, renderização
+        └── planet.py    # Classe Planet, tipos, sistema de horda e renderização
 ```
 
 ---
 
 ## Persistência
 
-- **Auto-save** a cada 30 segundos durante o jogo
-- **Backup** automático do banco ao fechar
-- Login com nome de piloto: cria conta nova ou carrega dados existentes
+- O jogo salva progresso no banco de dados (`game_data.db`).
+- O banco possui backups automáticos.
+- Login com nome de piloto cria conta nova ou carrega dados existentes.
+
+---
+
+## Observações
+
+- A pasta `assets/player/` era um teste e foi removida, pois o jogo usa sprites diretamente em `assets/`.
+- O arquivo `zombie.py` era apenas um experimento e também foi removido.
 
 ---
 
