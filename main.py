@@ -7,15 +7,15 @@ Fluxo:  LOGIN → MENU → ORBITAL ↔ STRATEGIC
 Estados extras: GROUND (futuro), GAMEOVER
 """
 
-import pygame
-import random
-import math
-import json
-import ctypes
-from enum import Enum
-from settings import WIDTH, HEIGHT, FPS, TIME_SCALE, SUN_COLOR_INNER, SUN_COLOR_OUTER, SHIP_WORLD_UNITS, ENEMY_WORLD_UNITS, SHIP_VISUAL_UNITS, ENEMY_VISUAL_UNITS
+import pygame # serve para com biblioteca gráfica, input, som, e loop principal do jogo
+import random # Cria aleatoriedade em spawn de inimigos, posição de moedas, etc.
+import math # Calcula distâncias, ângulos, e outras operações matemáticas para movimentação, órbitas, etc.
+import json # Converte dados de planetas e minerais para armazenamento no banco de dados e leitura em objetos do jogo.
+import ctypes # Controla pixels para manter o game leve em qualquer tela
+from enum import Enum # Definições básicas de estados do jogo (LOGIN, MENU, ORBITAL, etc.)
+from settings import WIDTH, HEIGHT, FPS, TIME_SCALE, SUN_COLOR_INNER, SUN_COLOR_OUTER, SHIP_VISUAL_UNITS, ENEMY_VISUAL_UNITS # Config basicas de tela, tempo, cores, e escalas de unidades para nave e inimigos
 
-# Diz ao Windows para não escalar o processo — pygame recebe pixels reais da tela pq assim a gente controla o zoom manualmente (câmera) e evita problemas de DPI em telas 4K agora que o universo é expandido para órbitas maiores. Se falhar, o jogo ainda roda, mas pode ter problemas de escala em telas de alta DPI.
+# Diz ao Windows para não escalar o processo — pygame recebe pixels reais da tela pq assim a gente controla o zoom manualmente (câmera) e evita problemas de DPI em telas 4K agora que o universo é expandido para órbitas maiores. Se falhar, o jogo ainda roda, mas pode ter problemas de escala em telas de alta DPI. Evita que o game fique embaçado ou esticar em diferentes telas. O try/except é para garantir compatibilidade com diferentes versões do Windows e Python, e para evitar crashes caso a API de DPI não esteja disponível.
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(2)
 except Exception:
@@ -222,77 +222,76 @@ class GameState(Enum):
     GAMEOVER  = 5
 
 # ── Pygame ────────────────────────────────────────────────────────────────────
-pygame.init()
-screen  = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
-pygame.display.set_caption("GAME ZERO")
-clock   = pygame.time.Clock()
-running = True
+pygame.init() # inicializa todos os módulos do pygame (gráficos, som, input, etc.)
+screen  = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE) # cria a janela do jogo com as dimensões definidas em settings.py e permite redimensionar 
+pygame.display.set_caption("GAME ZERO") # define o título da janela do jogo
+clock   = pygame.time.Clock() # conntrola a taxa de atualização do jopo (FPS) e o tempo entre frames
+running = True # flag para controlar o loop principal do jogo — fica False para sair do jogo
 
-font_large  = pygame.font.SysFont("Arial", 74)
-font_medium = pygame.font.SysFont("Arial", 36)
-font_small  = pygame.font.SysFont("Arial", 24)
+font_large  = pygame.font.SysFont("Arial", 74) # fonte grande para títulos e mensagens importantes
+font_medium = pygame.font.SysFont("Arial", 36) # fonte média para menus, pontuação, e mensagens secundárias
+font_small  = pygame.font.SysFont("Arial", 24) # fonte pequena para dicas, créditos, e mensagens de status
 
 # ── Câmera e fundo ────────────────────────────────────────────────────────────
-camera     = Camera(WIDTH, HEIGHT)
-star_field = StarField(world_width=160000, world_height=160000, density=0.05)
-
+camera     = Camera(WIDTH, HEIGHT) # controla o zoom e a posição da visão do jogador no mundo, permitindo explorar o universo expandido
+star_field = StarField(world_width=160000, world_height=160000, density=0.05) # fundo de estrelas
+ 
 # ── Grupos de sprites ─────────────────────────────────────────────────────────
-players = pygame.sprite.Group()
-coins   = pygame.sprite.Group()
+players = pygame.sprite.Group() 
+coins   = pygame.sprite.Group() 
 enemies = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
 
-# ── Estado do jogo ────────────────────────────────────────────────────────────
-player            = None
-score_enemies     = 0
-invincible_timer  = 0.0
-auto_save_timer   = 0.0
-game_initialized  = False
-rapid_fire_timer  = 0.0
+# ── Estado do jogo aqui organizamos variáveis globais para o estado do jogo, como o jogador atual, pontuação, timers, e planeta em que o jogador está pousado (se estiver). Isso facilita o acesso e modificação desses dados em diferentes partes do código.
+score_enemies     = 0 # pontuação baseada em inimigos derrotados
+invincible_timer  = 0.0 # tempo restante de invencibilidade após ser atingido por um inimigo ou horda (em segundos)
+auto_save_timer   = 0.0 # timer para salvar o progresso do jogo a cada intervalo (em segundos)
+game_initialized  = False # indica se o jogo foi inicializado (após login e configuração inicial)
+rapid_fire_timer  = 0.0 # timer para controlar o intervalo entre disparos em modo de fogo rápido (em segundos)
 spawn_protection  = 0.0   # segundos de imunidade no spawn (sem horda)
 strat_zoom        = 1.0   # zoom do mapa estratégico (scroll no modo M)
 STRAT_SCALE_BASE  = 0.003 # escala base — mesma que STRAT_SCALE em planet.py
 landed_planet     = None  # planeta em que o player está pousado (estado GROUND)
 landed_angle      = 0.0   # ângulo de abordagem ao pousar (para decolar de volta)
 
-RAPID_FIRE_INTERVAL = 0.08
-RAPID_FIRE_MIN_GOLD = 10
+RAPID_FIRE_INTERVAL = 0.08 # tempo mínimo entre disparos em modo de fogo rápido (em segundos)
+RAPID_FIRE_MIN_GOLD = 10 # ouro mínimo para ativar fogo rápido
 POWER_SHOT_GOLD_MIN = 100   # ouro mínimo para dano x2
 POWER_SHOT_DRAIN    = 10    # ouro consumido a cada POWER_DRAIN_SHOTS disparos
-POWER_DRAIN_SHOTS   = 100
+POWER_DRAIN_SHOTS   = 100 # disparos para consumir ouro no modo de fogo rápido (a cada 100 tiros, consome POWER_SHOT_DRAIN de ouro)
 
 # ── Jogador / Login ───────────────────────────────────────────────────────────
-player_db_id      = None
-player_username   = ""
+player_db_id      = None # Id para salvar progresso
+player_username   = "" # nome do jogador para exibir no jogo e salvar progresso
 player_gold       = 0          # ouro acumulado (moeda da Dobra Temporal)
 player_name_input = ""         # campo de texto na tela de login
 bullet_shot_counter = 0        # contagem de disparos para consumo de ouro
 
 # ── Planetas e navegação ──────────────────────────────────────────────────────
-planets         = []
-selected_planet = None
-current_planet  = None
+planets         = [] # Lista de corpos celestes
+selected_planet = None # planeta atualmente selecionado para navegação ou pouso (pode ser None se não houver seleção)
+current_planet  = None # variavel para o planeta em que o jogador está atualmente pousado ou orbitando (None se no espaço) assim ativa horda por proximidade
 
 # ── UI temporária (mensagens na tela) ─────────────────────────────────────────
-ui_message       = ""
-ui_message_timer = 0.0
-ui_message_color = (255, 220, 60)
+ui_message       = "" # renderiza msg temporária na tela (ex: "Planeta conquistado!", "Dobra Temporal ativada!", etc.)
+ui_message_timer = 0.0 # tempo para aparecer e desaparecer a mensagem (em segundos)
+ui_message_color = (255, 220, 60) # cor da msg
 
 _ASTEROID_NAMES = {
     'Vesta', 'Pallas', 'Juno', 'Hygiea', 'Psyche', 'Eros', 'Itokawa',
-}
+} # asteroides nomeados do cinturão principal — não conquistáveis, cenário
 
-def show_message(text, duration=3.0, color=(255, 220, 60)):
-    global ui_message, ui_message_timer, ui_message_color
+def show_message(text, duration=3.0, color=(255, 220, 60)): # funçao exibe msg de status temporária na tela como conquistas e alertas como "Dobra Temporal ativada!" ou "Ouro insuficiente para Dobra Temporal!" — recebe o texto da mensagem, duração em segundos, e cor (padrão amarelo claro)
+    global ui_message, ui_message_timer, ui_message_color # variáveis globais para controlar a mensagem atual, seu timer, e cor
     ui_message       = text
     ui_message_timer = duration
     ui_message_color = color
 
-# ── Database ──────────────────────────────────────────────────────────────────
-db = GameDatabase('game_data.db')
+# ── Database 
+db = GameDatabase('game_data.db') # instancia o db em a cada saida do game
 
-# ── Geração / carregamento de planetas ───────────────────────────────────────
-def _seed_planets():
+# ── Geração / carregamento de planetas sempre que acessa o game
+def _seed_planets(): # função para semear os planetas no banco de dados
     """Popula o banco com o sistema solar fixo, apagando dados antigos."""
     db.conn.execute("DELETE FROM planets")
     db.conn.commit()
@@ -310,9 +309,9 @@ def _seed_planets():
     print(f"[DB] Sistema solar semeado: {len(SOLAR_SYSTEM)} planetas")
 
 
-planets_db     = db.get_all_planets()
-expected_names = {e['name'] for e in SOLAR_SYSTEM}
-existing_names = {row['name'] for row in planets_db}
+planets_db     = db.get_all_planets() 
+expected_names = {e['name'] for e in SOLAR_SYSTEM} 
+existing_names = {row['name'] for row in planets_db} 
 
 # Re-semeia se nomes ou tamanhos de planeta mudaram
 _need_reseed = not planets_db or expected_names != existing_names
@@ -327,7 +326,7 @@ if _need_reseed:
     _seed_planets()
     planets_db = db.get_all_planets()
 
-for row in planets_db:
+for row in planets_db: # 
     minerals = json.loads(row['minerals']) if isinstance(row['minerals'], str) else {}
     p = Planet(id=row['id'], name=row['name'],
                x=row['x'], y=row['y'],
@@ -347,7 +346,7 @@ for _p in planets:
     if _p.name in _ASTEROID_NAMES:
         _p.is_conquerable = False
 
-# ── Wiring de satélites — Moon orbita Terra ───────────────────────────────────
+# ── Wiring de satélites — Moon orbita Terra ou seja simula ao longo do tempo o girar da lua com a Terra
 _terra = next((p for p in planets if p.name == 'Terra'), None)
 _moon  = next((p for p in planets if p.name == 'Moon'),  None)
 if _terra and _moon:
@@ -362,7 +361,7 @@ if _terra and _moon:
     _moon.y = _terra.y + _r * math.sin(_moon.angle)
     print(f"[ORBIT] Moon → Terra | r=384 400 km (real) | Terra visual_r={_terra.visual_radius} km")
 
-# ── Wiring de satélites — Luas de Júpiter ────────────────────────────────────
+# ── Wiring de satélites — Luas de Júpiter  mesmo processo da 
 # semi_major_axis é substituído por parent.visual_radius * N para escala jogável.
 # Proporções relativas mantidas: Io < Europa < Ganimedes < Calisto.
 _jupiter = next((p for p in planets if p.name == 'Jupiter'), None)
@@ -1059,12 +1058,24 @@ class GameEngine:
 
     # ── Draw ──────────────────────────────────────────────────────────────────
     def draw(self, screen):
-        if   self.state == GameState.LOGIN:     self._draw_login(screen)
-        elif self.state == GameState.MENU:      self._draw_menu(screen)
-        elif self.state == GameState.ORBITAL:   self._draw_orbital(screen)
-        elif self.state == GameState.STRATEGIC: self._draw_strategic(screen)
-        elif self.state == GameState.GROUND:    self._draw_ground(screen)
-        elif self.state == GameState.GAMEOVER:  self._draw_gameover(screen)
+        match self.state:
+            case GameState.LOGIN:
+                self._draw_login(screen)
+            case GameState.MENU:
+                self._draw_menu(screen)
+            case GameState.ORBITAL:
+                self._draw_orbital(screen)
+            case GameState.STRATEGIC:
+                self._draw_strategic(screen)
+            case GameState.GROUND:
+                self._draw_ground(screen)
+            case GameState.GAMEOVER:
+                self._draw_gameover(screen)
+            case _:
+                # O '_' é o "caso padrão" (opcional), 
+                # roda se nada acima coincidir.
+                print("Estado desconhecido")
+
 
     def _draw_login(self, screen):
         screen.fill((5, 5, 15))
